@@ -149,8 +149,3 @@ Slash commands (repo → `~/.claude/commands/`): **`/pipeline-status`** (monitor
 ### Related skills (domain knowledge)
 
 - `go/skills/pipeline-failures`, `pipeline-jira`, `rhcos-build-pipeline`, `bug-investigation`, `bug-triage`, etc.
-
-### Inspiration (not vendored)
-
-- `claude-code-agents-demo/` — local clone example of **inline + `.claude/agents/`** patterns.
-- `workflows/` — Ambient workflow packaging (`ambient.json`); optional future port of the same personas.
