@@ -62,29 +62,6 @@ cp .claude/commands/pipeline-triage.md ~/.claude/commands/
 cp coreos_pipeline_status.md ~/.claude/commands/   # if you use /coreos_pipeline_status
 ```
 
-### Optional: Claude Code status line
-
-Claude Code shows session cost and token usage in its built-in status bar. You can also type `/cost` at any time for a detailed breakdown.
-
-To add a **custom status line** (timestamp, model, session indicator) at the bottom of your terminal, add the following to your **user** settings (`~/.claude/settings.json`):
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "echo \"$(date '+%H:%M') | model: opus | session active\"",
-    "refreshInterval": 30
-  }
-}
-```
-
-> **Merge, don't replace** — if you already have content in `~/.claude/settings.json`, add the `statusLine` key alongside your existing settings.
-
-**Useful `/cost` and status tips:**
-- `/cost` — detailed cost and token breakdown for the current session
-- The built-in status bar (bottom of terminal) always shows cumulative session cost, model, and context usage
-- The custom `statusLine` above adds a persistent timestamp and model label; customise the `command` to show whatever you find useful (git branch, env, etc.)
-
 ### Optional: Jira MCP (Claude Code)
 
 Lets Claude Code use **[mcp-atlassian](https://github.com/sooperset/mcp-atlassian)** so **`@jira-similarity-search`** and related flows can **search and view** issues on **issues.redhat.com** without a host `jira` CLI.
