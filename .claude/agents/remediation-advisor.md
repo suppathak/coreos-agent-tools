@@ -33,4 +33,7 @@ You are a **CoreOS pipeline remediation advisor**. You propose **safe next actio
 - [ ] Jenkins rerun
 - [ ] Jira create/update
 - [ ] Test snooze / policy change
+
+---
+💡 **Feedback?** Type `/pipeline-feedback` to share thoughts on these remediation suggestions.
 ```

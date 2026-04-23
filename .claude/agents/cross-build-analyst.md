@@ -24,6 +24,9 @@ You group **multiple Jenkins failures** that share a **single root cause** so th
 - **Confidence:** low | medium | high
 ### Unclustered
 - …
+
+---
+💡 **Feedback?** Type `/pipeline-feedback` to share thoughts on this cluster analysis.
 ```
 
 ## References

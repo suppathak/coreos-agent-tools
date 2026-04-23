@@ -33,6 +33,9 @@ $RUN jenkins.py builds list <job-name> --last 5 --pretty
 - **Recommended triage target:** `<job>` / `<build-number>`
 - **Why this pick:** …
 - **Next step:** Ask **@pipeline-investigator** to triage this build (or run `/pipeline-triage`).
+
+---
+💡 **Feedback?** Type `/pipeline-feedback` to share thoughts on this monitoring summary.
 ```
 
 ## Domain knowledge

@@ -62,20 +62,81 @@ cp .claude/commands/pipeline-triage.md ~/.claude/commands/
 cp coreos_pipeline_status.md ~/.claude/commands/   # if you use /coreos_pipeline_status
 ```
 
+### Optional: Claude Code status line
+
+Claude Code shows session cost and token usage in its built-in status bar. You can also type `/cost` at any time for a detailed breakdown.
+
+To add a **custom status line** (timestamp, model, session indicator) at the bottom of your terminal, add the following to your **user** settings (`~/.claude/settings.json`):
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "echo \"$(date '+%H:%M') | model: opus | session active\"",
+    "refreshInterval": 30
+  }
+}
+```
+
+> **Merge, don't replace** — if you already have content in `~/.claude/settings.json`, add the `statusLine` key alongside your existing settings.
+
+**Useful `/cost` and status tips:**
+- `/cost` — detailed cost and token breakdown for the current session
+- The built-in status bar (bottom of terminal) always shows cumulative session cost, model, and context usage
+- The custom `statusLine` above adds a persistent timestamp and model label; customise the `command` to show whatever you find useful (git branch, env, etc.)
+
+### Optional: Jira MCP (Claude Code)
+
+Lets Claude Code use **[mcp-atlassian](https://github.com/sooperset/mcp-atlassian)** so **`@jira-similarity-search`** and related flows can **search and view** issues on **issues.redhat.com** without a host `jira` CLI.
+
+**You need:** [uv](https://docs.astral.sh/uv/) (for `uvx`), your **Atlassian account email**, and an **API token** from **id.atlassian.com → Security → Create and manage API tokens** (not a repo secret—create it in the browser).
+
+**Register (example — replace placeholders; do not commit tokens):**
+
+Use **`JIRA_PROJECTS_FILTER`** so MCP stays scoped to **COS** (CoreOS pipeline work) and does not pull your entire Jira footprint by default. Set **`JIRA_URL`** to the same host you use in the browser (`issues.redhat.com` vs `*.atlassian.net`—your org may use one or both).
+
+```bash
+claude mcp add jira \
+  -e JIRA_URL=https://issues.redhat.com/ \
+  -e JIRA_USERNAME='your-email@redhat.com' \
+  -e JIRA_API_TOKEN='your-api-token' \
+  -e JIRA_PROJECTS_FILTER=COS \
+  -e READ_ONLY_MODE=true \
+  -- uvx mcp-atlassian
+```
+
+Optional (see [mcp-atlassian configuration](https://github.com/sooperset/mcp-atlassian/blob/main/.env.example)): **`-e TOOLSETS=default`** for fewer tools, or **`-e ENABLED_TOOLS=...`** to allow only specific tool names if you want a minimal surface.
+
+Add **`-s user`** after `claude mcp add` if you want this server in **user** scope instead of **local** (current-directory project config). Config is stored under your home directory (e.g. `~/.claude.json`); **never commit** files that contain tokens. If a token is ever pasted into a chat or shell history, **revoke it** and create a new one.
+
+**Large MCP responses (~100k+ tokens):** Tools like **“Get all projects”** return **every** project you can access and can **fill the context window** in one call. **Do not** use them for connectivity checks. Prefer a **small JQL** search with a **low limit** (e.g. `project = COS ORDER BY updated DESC`, **max 3–5** issues). In prompts, say explicitly: *do not list all projects; only search with this JQL and limit N.*
+
+**Verify read-only access (no Jira writes):**
+
+1. `claude mcp list` — confirm **`jira`** appears.
+2. Restart **Claude Code**, open this repo, and run a **read-only** prompt, for example:  
+   *“Using Jira tools **only** to **search** and **read** issues: JQL `project = COS AND updated >= -7d ORDER BY updated DESC`, return at most **5** issues (**key + summary + status**). **Do not** list all projects. **Do not** create, edit, transition, or comment on any issue.”*
+3. If you get real issue keys back, MCP auth is working.
+
+**If `claude mcp list` says Connected but JQL search still fails:** Auth is often fine; **search** can break separately. Atlassian **Jira Cloud** deprecated older REST search endpoints; **mcp-atlassian** must be new enough to use the current search API. **Mitigations:** (1) Bump the MCP package—re-add the server using **`uvx --refresh-package mcp-atlassian mcp-atlassian`** (or `uvx mcp-atlassian@0.21.1` / newer from [PyPI](https://pypi.org/project/mcp-atlassian/)) so you are not stuck on a stale cache. (2) Install the host **`jira` CLI** (`brew install jira-cli`, then configure for your site—see [ankitpokhrel/jira-cli](https://github.com/ankitpokhrel/jira-cli)) so **`@jira-similarity-search`** can fall back when MCP search errors. (3) Last resort: run from git main if PyPI still lags—see the upstream repo.
+
+**Write policy:** Pipeline agents in this repo are defined to **draft** handoffs and **not** change Jira unless **you** explicitly ask in-session; keep using that rule when testing MCP.
+
 **Run Claude Code** from the repo root (`claude`), then:
 
 | Action | What to type |
 |--------|----------------|
 | Pipeline health / what to triage | `/pipeline-status` or ask: *What’s the current RHEL CoreOS Jenkins pipeline status?* |
 | Deep triage for one build | `/pipeline-triage` then *job `build`, build `116`* — or `@pipeline-investigator triage job build, build 116` |
+| Similar existing COS issues (dedupe) | `@jira-similarity-search` with job, build, and error/classification (needs Jira access in your environment) |
 | Jira draft (no auto-create) | `@pipeline-handoff` with your triage summary |
 | Next-step options | `@remediation-advisor` after triage |
 | Group failures by root cause | `@cross-build-analyst` (see `.claude/agents/cross-build-analyst.md`) |
 
 **Repo layout for agents**
 
-- `.claude/agents/*.md` — personas (monitor, investigator, handoff, remediation, cross-build analyst)
-- `go/skills/pipeline-triage-workflow/SKILL.md` — staged workflow (Gather → Logs → Classify → Summarize → human **GATE** before Jira/reruns)
+- `.claude/agents/*.md` — personas (monitor, investigator, Jira similarity search, handoff, remediation, cross-build analyst)
+- `go/skills/pipeline-triage-workflow/SKILL.md` — staged Jenkins triage (Gather → Logs → Classify → Summarize → **GATE**); **@jira-similarity-search** is a separate step before **@pipeline-handoff**
 - `go/skills/pipeline-failures`, `pipeline-jira`, etc. — domain playbooks the agents reference
 
 `~/.claude/commands/` only registers slash commands; **source files stay in this repo** so the team can review them in PRs.

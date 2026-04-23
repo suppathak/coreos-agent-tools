@@ -7,7 +7,8 @@ description: Create JIRA issues for CI pipeline failures - COS project conventio
 
 JIRA CLI commands and COS project conventions for tracking CI pipeline failures.
 
-> Related: `pipeline-failures`
+> Related: `pipeline-failures`  
+> Use whatever **Jira tools** the session provides (CLI and/or MCP); the **JQL** below is the same either way.
 
 ## JIRA CLI Commands
 
@@ -23,6 +24,30 @@ jira issue list --project COS --status "Open" --plain
 # List issues by component
 jira issue list --project COS --component RHCOS --plain
 ```
+
+### Similar issues (bounded search)
+
+Use this **before** drafting a **new** ticket when you have **job name**, **build**, and a **short error or classification** (often from triage). Keep result sets small; widen the window only if needed.
+
+**Principles:** default **COS**, **last 7 days** (`updated`), **open / in progress** first; add **text** or **summary** terms from the failure; use `jira issue view KEY` to compare.
+
+**Browse URLs:** When listing similarity candidates (dedupe), include a **clickable browse URL** per issue key: `https://<JIRA_HOST>/browse/<KEY>`. Derive `<JIRA_HOST>` from your Jira base URL / MCP config (e.g. `redhat.atlassian.net`, `issues.redhat.com`); do not output only the REST `self` URL without a `/browse/<KEY>` link.
+
+```bash
+# Recent COS activity (adjust -7d → -14d only if needed)
+jira issue list --project COS -q "updated >= -7d ORDER BY updated DESC" --plain
+
+# Open or in progress only (parentheses matter for OR)
+jira issue list --project COS -q "updated >= -7d AND (statusCategory = \"To Do\" OR statusCategory = \"In Progress\") ORDER BY updated DESC" --plain
+
+# Narrow: job name in summary (replace build with real job token)
+jira issue list --project COS -q "updated >= -7d AND summary ~ 'build' ORDER BY updated DESC" --plain
+
+# Narrow: free-text token from logs (quote special JQL characters)
+jira issue list --project COS -q "updated >= -7d AND text ~ 'registry' ORDER BY updated DESC" --plain
+```
+
+JQL support varies slightly by Jira site; if a query fails, simplify (e.g. drop `statusCategory`, use `status in (Open, \"In Progress\")` per your workflow).
 
 ### Creating Issues
 

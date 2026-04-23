@@ -1,6 +1,6 @@
 ---
 name: pipeline-triage-workflow
-description: Ordered agent-style triage for a single failed Jenkins build — gather metadata, logs, classification, summary; human gate before Jira writes.
+description: Ordered agent-style triage for a single failed Jenkins build — gather metadata, logs, classification, summary; human gate before Jira writes. Jira search is a separate agent.
 ---
 
 # Pipeline triage workflow (agentic)
@@ -17,7 +17,9 @@ Run **one failed build** through a **fixed sequence** of stages. Each stage has 
 
 **Inputs (required):** `JOB` (Jenkins job name), `BUILD` (integer build number).
 
-**Related skills:** `pipeline-failures` (deep patterns, kola via `coreos-tools` if you use the Go image), `pipeline-jira` (COS ticket text after GATE).
+**Related skills:** `pipeline-failures` (deep patterns, kola via `coreos-tools` if you use the Go image), `pipeline-jira` (COS ticket text **after** GATE, via **@pipeline-handoff**).
+
+**Multi-agent sequence (recommended):** **@pipeline-investigator** (this skill, stages 1–4) → **@jira-similarity-search** (read-only COS dedupe; `go/skills/pipeline-jira` bounded JQL) → **@pipeline-handoff** (draft). Investigator does **not** call Jira; keep Jenkins vs Jira concerns separate.
 
 ---
 
@@ -114,17 +116,19 @@ Use grep patterns from `pipeline-failures` when analyzing saved log text (`error
 
 ## GATE — Human checkpoint (no Jira / no rerun without approval)
 
-**Stop.** Present the **Gather → Logs → Classify → Summarize** sections to the user.
+**Stop.** Present **Gather → Logs → Classify → Summarize** to the user.
 
-**Default policy:** Only **suggest** Jira text or rerun. Do **not** run `jira issue create` or `jenkins.py jobs build` unless the user **explicitly** asks.
+**Next agents (typical order):** Tell the user to run **@jira-similarity-search** with job, build, classification, and a short error excerpt **before** **@pipeline-handoff**, so dedupe is explicit and **Jenkins triage stays separate from Jira**.
 
-After approval, use **`pipeline-jira`** for COS conventions and commands.
+**Default policy:** Only **suggest** Jira text or rerun. Do **not** run `jira issue create` or `jenkins.py jobs build` unless the user **explicitly** asks. Do **not** query Jira from this skill—use **@jira-similarity-search** for that.
+
+After similarity + approval, use **`pipeline-jira`** with **@pipeline-handoff** for COS conventions and commands.
 
 ---
 
 ## Execution rules for Claude Code
 
 1. Complete **Stages 1–4 in order** in one run when the user provides `JOB` and `BUILD`.
-2. Ask for **JOB** and **BUILD** only if missing; do not ask “what next?” between stages.
+2. Ask for **JOB** and **BUILD** only if missing; do not ask “what next?” between stages **1–4**.
 3. On CLI errors (auth, network), stop and report; do not invent build data.
 4. Prefer **`jenkins.py`** (Python container) for portability; use **`coreos-tools`** only when that binary is available in the user’s environment.

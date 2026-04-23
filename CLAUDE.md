@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# Instructions
+
 ## Mandatory: RHCOS / Jenkins agent routing
 
 When the user’s message is about **RHEL CoreOS / RHCOS / Jenkins / the `build` pipeline / pipeline health / failures / triage** (and not unrelated repo work such as editing unrelated code, pure CVE workflow without Jenkins, or `get_rhcos_image.py` only), **do not** answer as a generic assistant alone.
@@ -20,6 +22,7 @@ When the user’s message is about **RHEL CoreOS / RHCOS / Jenkins / the `build`
 | Current / latest build, pipeline status, what’s red, “look at RHCOS pipeline”, Jenkins health, recent failures overview | `.claude/agents/pipeline-monitor.md` |
 | Root cause, triage, classify, investigate build #N, analyze console log, “why did it fail” | `.claude/agents/pipeline-investigator.md` + `go/skills/pipeline-triage-workflow/SKILL.md` — if job/build missing, do **monitor** discovery first |
 | Jira / COS subtask / draft ticket / handoff / routing to RHEL | `.claude/agents/pipeline-handoff.md` |
+| “Is there already a ticket?”, duplicate check, similar COS issues, search Jira for this failure | `.claude/agents/jira-similarity-search.md` + `go/skills/pipeline-jira` (bounded JQL) |
 | What next, rerun, remediation, safe options | `.claude/agents/remediation-advisor.md` |
 | Many failures, cluster by root cause, duplicate incidents | `.claude/agents/cross-build-analyst.md` |
 
@@ -37,10 +40,6 @@ CoreOS Agent Tools is a collection of Python CLI tools for monitoring and analyz
 - **jenkins.py** - Comprehensive Jenkins CLI for managing jobs, builds, queue, and nodes
 - **process_rhcos_cves.py** - Processes RHCOS CVEs from Jira, matches with RHEL issues, and creates issue links
 - **get_rhcos_image.py** - Retrieves RHCOS container image data for specific OCP versions\
-
-## Task Tracking
-
-Use `bd` for task tracking
 
 ## Commands
 
@@ -101,8 +100,10 @@ Both `jenkins.py` and `process_rhcos_cves.py` implement rate limiting (2 req/sec
 ### Claude Code Integration
 The project includes a slash command at `coreos_pipeline_status.md` for analyzing pipeline builds. Copy to `~/.claude/commands/` to use with `/coreos_pipeline_status`.
 
+Jira-related agents (**@jira-similarity-search**, **@pipeline-handoff**) assume you already have **Jira access** in your environment (host **`jira` CLI** and/or **MCP** tools your editor wires up). This repo documents **COS workflow and JQL ideas**, not how to authenticate to Jira.
+
 ### Agentic pipeline triage (workflow organization)
-Ordered **multi-stage triage** for **one** failed Jenkins build (Gather → Logs → Classify → Summarize → **human gate** before Jira/rerun):
+Ordered **multi-stage triage** for **one** failed Jenkins build (Gather → Logs → Classify → Summarize → **human gate**; then **@jira-similarity-search** before **@pipeline-handoff** when opening Jira work):
 
 - **Skill:** `go/skills/pipeline-triage-workflow/SKILL.md`
 - **Slash command (repo):** `.claude/commands/pipeline-triage.md` — copy or symlink into `~/.claude/commands/` to use `/pipeline-triage` in Claude Code, or invoke by asking Claude to follow that skill.
@@ -128,7 +129,8 @@ Claude Code discovers these; invoke with **`@pipeline-monitor`**, **`@pipeline-i
 | Agent | Role | Primary skill / doc |
 |--------|------|---------------------|
 | **@pipeline-monitor** | Find failing jobs/builds via Jenkins (read-mostly) | `go/skills/pipeline-failures` (identify failures) |
-| **@pipeline-investigator** | Ordered triage for **one** build (Gather→Logs→Classify→Summarize→GATE) | `go/skills/pipeline-triage-workflow`, `pipeline-failures` |
+| **@pipeline-investigator** | Ordered triage for **one** build (Jenkins only → GATE) | `go/skills/pipeline-triage-workflow`, `pipeline-failures` |
+| **@jira-similarity-search** | Bounded JQL search for **similar existing** COS issues (dedupe before new work) | `go/skills/pipeline-jira` |
 | **@pipeline-handoff** | Draft COS Jira + routing (RHEL/infra/ART); anti-noise | `go/skills/pipeline-jira` |
 | **@remediation-advisor** | Rerun vs escalate vs snooze; policy-safe suggestions | `pipeline-failures`, `pipeline-jira` |
 | **@cross-build-analyst** | Optional **phase 2**: cluster many failures by root cause | `pipeline-failures` |
@@ -141,6 +143,7 @@ You can also use **minimal** chat with explicit @mentions, for example:
 
 - ` @pipeline-monitor — what should we triage next on Jenkins? `
 - ` @pipeline-investigator — triage job build, build 116 `
+- ` @jira-similarity-search — job build build 116, classification infra flake, error excerpt: … `
 - ` @pipeline-handoff — draft a COS subtask from the last triage summary `
 - ` @remediation-advisor — what are safe next steps for this failure? `
 
@@ -149,3 +152,4 @@ Slash commands (repo → `~/.claude/commands/`): **`/pipeline-status`** (monitor
 ### Related skills (domain knowledge)
 
 - `go/skills/pipeline-failures`, `pipeline-jira`, `rhcos-build-pipeline`, `bug-investigation`, `bug-triage`, etc.
+
