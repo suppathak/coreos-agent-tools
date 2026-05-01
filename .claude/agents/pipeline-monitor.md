@@ -40,5 +40,5 @@ $RUN jenkins.py builds list <job-name> --last 5 --pretty
 
 ## Domain knowledge
 
-- Deep patterns: `go/skills/pipeline-failures` (sections on identifying failures, downstream jobs).
+- Deep patterns: `skills/pipeline-failures` (sections on identifying failures, downstream jobs).
 - Do **not** open Jira or post to Slack unless the user explicitly requests it in this turn.

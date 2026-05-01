@@ -17,7 +17,7 @@ This skill enables users to:
 
 ## Data Source
 
-Reads from: `go/skills/pipeline-feedback-capture/scripts/feedback.json`
+Reads from: `skills/pipeline-feedback-capture/scripts/feedback.json`
 
 This is the same file where `/pipeline-feedback` stores all feedback entries.
 
@@ -37,31 +37,31 @@ This is the same file where `/pipeline-feedback` stores all feedback entries.
 ### Direct Script Usage
 ```bash
 # Show all feedback
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py
+python skills/review-pipeline-feedback/scripts/search_feedback.py
 
 # Filter by step
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --step pipeline-monitor
+python skills/review-pipeline-feedback/scripts/search_feedback.py --step pipeline-monitor
 
 # Filter by category
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --category Complexity
+python skills/review-pipeline-feedback/scripts/search_feedback.py --category Complexity
 
 # Search for text
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --search "build #116"
+python skills/review-pipeline-feedback/scripts/search_feedback.py --search "build #116"
 
 # Recent feedback only
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --days 7
+python skills/review-pipeline-feedback/scripts/search_feedback.py --days 7
 
 # Combine filters
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py \
+python skills/review-pipeline-feedback/scripts/search_feedback.py \
   --step pipeline-investigator \
   --category Accuracy \
   --days 30
 
 # Summary only (no individual entries)
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --summary-only
+python skills/review-pipeline-feedback/scripts/search_feedback.py --summary-only
 
 # Limit results
-python go/skills/review-pipeline-feedback/scripts/search_feedback.py --limit 10
+python skills/review-pipeline-feedback/scripts/search_feedback.py --limit 10
 ```
 
 ## Search Filters
@@ -150,7 +150,7 @@ For each matching entry:
 
 ```
 Loaded 4 total feedback entries from:
-  /Users/supathak/CoreOS/coreos-agent-tools/go/skills/pipeline-feedback-capture/scripts/feedback.json
+  /Users/supathak/CoreOS/coreos-agent-tools/skills/pipeline-feedback-capture/scripts/feedback.json
 
 ================================================================================
 FEEDBACK SUMMARY — 2 entries found

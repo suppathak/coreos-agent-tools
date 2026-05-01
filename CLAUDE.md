@@ -20,15 +20,45 @@ When the user’s message is about **RHEL CoreOS / RHCOS / Jenkins / the `build`
 | User intent (examples) | Read and follow |
 |------------------------|-----------------|
 | Current / latest build, pipeline status, what’s red, “look at RHCOS pipeline”, Jenkins health, recent failures overview | `.claude/agents/pipeline-monitor.md` |
-| Root cause, triage, classify, investigate build #N, analyze console log, “why did it fail” | `.claude/agents/pipeline-investigator.md` + `go/skills/pipeline-triage-workflow/SKILL.md` — if job/build missing, do **monitor** discovery first |
+| Root cause, triage, classify, investigate build #N, analyze console log, “why did it fail” | `.claude/agents/pipeline-investigator.md` + `skills/pipeline-triage-workflow/SKILL.md` — if job/build missing, do **monitor** discovery first |
 | Jira / COS subtask / draft ticket / handoff / routing to RHEL | `.claude/agents/pipeline-handoff.md` |
-| “Is there already a ticket?”, duplicate check, similar COS issues, search Jira for this failure | `.claude/agents/jira-similarity-search.md` + `go/skills/pipeline-jira` (bounded JQL) |
+| Similar **GitLab** tracker issues, flake history, dedupe in `pipeline-failure-tracker` (prefer **before** Jira in workflow) | `.claude/agents/gitlab-similarity-search.md` + `skills/pipeline-gitlab` (PAT + API; **no** GitLab MCP required) |
+| “Is there already a ticket?”, duplicate check, similar COS issues, search Jira for this failure | `.claude/agents/jira-similarity-search.md` + `skills/pipeline-jira` (bounded JQL) |
 | What next, rerun, remediation, safe options | `.claude/agents/remediation-advisor.md` |
 | Many failures, cluster by root cause, duplicate incidents | `.claude/agents/cross-build-analyst.md` |
 
 **If the user already @-mentions an agent**, that agent **wins** for this turn (no need to re-route).
 
 **Slash commands** (copy `.claude/commands/*.md` to `~/.claude/commands/`): **`/pipeline-status`** → monitor behavior; **`/pipeline-triage`** → investigator workflow.
+
+---
+
+## Repository layout (read when navigating the repo)
+
+```mermaid
+flowchart LR
+  subgraph exec [Execution — default for pipeline agents]
+    IMG["Root Dockerfile\n+ jenkins.py / *.py"]
+  end
+  subgraph claude [Claude Code — versioned behavior]
+    AG[".claude/agents/*.md"]
+    CMD[".claude/commands/*.md"]
+    SK["skills/*/SKILL.md"]
+  end
+  subgraph optional [Optional]
+    GO["go/\nGo coreos-tools"]
+    AGIMG["go/Dockerfile.agent\ncopies skills/ → OpenCode"]
+  end
+  SK --> AG
+  IMG --> AG
+  SK --> AGIMG
+  GO --> AGIMG
+```
+
+- **`skills/`** — Markdown **skills** (workflows, JQL, GitLab API patterns). **Not** part of the Go module; paths look like `skills/<name>/SKILL.md`.
+- **`.claude/`** — **Agents** (`@pipeline-monitor`, …) and **slash commands** (`/pipeline-triage`, …).
+- **Repo root** — Python CLIs and **`Dockerfile`**: canonical **`podman run --env-file .env … jenkins.py`** for investigator/monitor.
+- **`go/`** — Separate **Go** CLI; **`go/Dockerfile.agent`** (build context **repo root**) copies **`skills/`** into the OpenCode image — update **`COPY skills/`** if you relocate skills.
 
 ---
 
@@ -84,6 +114,9 @@ Required environment variables (configured via `.env` file):
 | `JENKINS_USER` | jenkins.py | Jenkins username |
 | `JENKINS_API_TOKEN` | jenkins.py | Jenkins API token |
 | `JIRA_API_TOKEN` | process_rhcos_cves.py | Jira API bearer token |
+| `GITLAB_TOKEN` | Claude Code / host `curl` | Personal access token for **`@gitlab-similarity-search`** / **`skills/pipeline-gitlab`** (not used by the container image unless you wire it in) |
+| `GITLAB_HOST` | Same | API hostname, default `gitlab.cee.redhat.com` |
+| `GITLAB_PROJECT` | Same | Project path, default `coreos/pipeline-failure-tracker` |
 | `REGISTRY_AUTH_FILE` | get_rhcos_image.py | Optional path to registry auth file |
 
 ## Architecture
@@ -102,13 +135,15 @@ The project includes a slash command at `coreos_pipeline_status.md` for analyzin
 
 Jira-related agents (**@jira-similarity-search**, **@pipeline-handoff**) assume you already have **Jira access** in your environment (host **`jira` CLI** and/or **MCP** tools your editor wires up). This repo documents **COS workflow and JQL ideas**, not how to authenticate to Jira.
 
-### Agentic pipeline triage (workflow organization)
-Ordered **multi-stage triage** for **one** failed Jenkins build (Gather → Logs → Classify → Summarize → **human gate**; then **@jira-similarity-search** before **@pipeline-handoff** when opening Jira work):
+**@gitlab-similarity-search** expects **`GITLAB_TOKEN`** (Personal Access Token) and optional **`GITLAB_HOST`** / **`GITLAB_PROJECT`** in the environment, or an authenticated **`glab`** session—see **`skills/pipeline-gitlab`**. Internal **`gitlab.cee.redhat.com`** OAuth MCP often fails on scope; **PAT + `curl`/`glab`** is the supported path here.
 
-- **Skill:** `go/skills/pipeline-triage-workflow/SKILL.md`
+### Agentic pipeline triage (workflow organization)
+Ordered **multi-stage triage** for **one** failed Jenkins build (Gather → Logs → Classify → Summarize → **human gate**; then **@gitlab-similarity-search** → **@jira-similarity-search** → **@pipeline-handoff** when opening tracked work — GitLab historical cache **before** COS Jira):
+
+- **Skill:** `skills/pipeline-triage-workflow/SKILL.md`
 - **Slash command (repo):** `.claude/commands/pipeline-triage.md` — copy or symlink into `~/.claude/commands/` to use `/pipeline-triage` in Claude Code, or invoke by asking Claude to follow that skill.
 
-This complements the existing `go/skills/pipeline-failures` and `go/skills/pipeline-jira` playbooks by defining **execution order** and **stop points**, not replacing their content.
+This complements the existing `skills/pipeline-failures` and `skills/pipeline-jira` playbooks by defining **execution order** and **stop points**, not replacing their content.
 
 ---
 
@@ -128,10 +163,11 @@ Claude Code discovers these; invoke with **`@pipeline-monitor`**, **`@pipeline-i
 
 | Agent | Role | Primary skill / doc |
 |--------|------|---------------------|
-| **@pipeline-monitor** | Find failing jobs/builds via Jenkins (read-mostly) | `go/skills/pipeline-failures` (identify failures) |
-| **@pipeline-investigator** | Ordered triage for **one** build (Jenkins only → GATE) | `go/skills/pipeline-triage-workflow`, `pipeline-failures` |
-| **@jira-similarity-search** | Bounded JQL search for **similar existing** COS issues (dedupe before new work) | `go/skills/pipeline-jira` |
-| **@pipeline-handoff** | Draft COS Jira + routing (RHEL/infra/ART); anti-noise | `go/skills/pipeline-jira` |
+| **@pipeline-monitor** | Find failing jobs/builds via Jenkins (read-mostly) | `skills/pipeline-failures` (identify failures) |
+| **@pipeline-investigator** | Ordered triage for **one** build (Jenkins only → GATE) | `skills/pipeline-triage-workflow`, `pipeline-failures` |
+| **@gitlab-similarity-search** | Bounded GitLab API search on **`pipeline-failure-tracker`** (history / flakes **before** Jira) | `skills/pipeline-gitlab` |
+| **@jira-similarity-search** | Bounded JQL search for **similar existing** COS issues (after GitLab when both run) | `skills/pipeline-jira` |
+| **@pipeline-handoff** | Draft COS Jira + routing (RHEL/infra/ART); anti-noise | `skills/pipeline-jira` |
 | **@remediation-advisor** | Rerun vs escalate vs snooze; policy-safe suggestions | `pipeline-failures`, `pipeline-jira` |
 | **@cross-build-analyst** | Optional **phase 2**: cluster many failures by root cause | `pipeline-failures` |
 
@@ -143,7 +179,8 @@ You can also use **minimal** chat with explicit @mentions, for example:
 
 - ` @pipeline-monitor — what should we triage next on Jenkins? `
 - ` @pipeline-investigator — triage job build, build 116 `
-- ` @jira-similarity-search — job build build 116, classification infra flake, error excerpt: … `
+- ` @gitlab-similarity-search — job build build 116, classification infra flake, error excerpt: … `
+- ` @jira-similarity-search — same signals after GitLab check `
 - ` @pipeline-handoff — draft a COS subtask from the last triage summary `
 - ` @remediation-advisor — what are safe next steps for this failure? `
 
@@ -151,5 +188,5 @@ Slash commands (repo → `~/.claude/commands/`): **`/pipeline-status`** (monitor
 
 ### Related skills (domain knowledge)
 
-- `go/skills/pipeline-failures`, `pipeline-jira`, `rhcos-build-pipeline`, `bug-investigation`, `bug-triage`, etc.
+- `skills/pipeline-failures`, `pipeline-jira`, `rhcos-build-pipeline`, `bug-investigation`, `bug-triage`, etc.
 

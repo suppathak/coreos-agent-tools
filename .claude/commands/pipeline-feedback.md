@@ -10,7 +10,7 @@ Collect user feedback on any step of the pipeline triage workflow.
 ## Instructions
 
 1. Read and follow `.claude/agents/pipeline-feedback-collector.md`
-2. Use the `pipeline-feedback-capture` skill from `go/skills/pipeline-feedback-capture/SKILL.md`
+2. Use the `pipeline-feedback-capture` skill from `skills/pipeline-feedback-capture/SKILL.md`
 3. Ask the user which step they want to provide feedback on (if not clear from context)
 4. Collect and record their feedback
 

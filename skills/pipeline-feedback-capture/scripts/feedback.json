@@ -1,0 +1,14 @@
+[
+  {
+    "id": "manual_20260422_211054",
+    "category": "Positive",
+    "date": "22-April-2026",
+    "timestamp": "2026-04-22T21:10:54.087386",
+    "step": "general-workflow",
+    "feedback": "Looks neat - overall workflow experience is good",
+    "context": "Full end-to-end pipeline triage for build #116 (registry_auth failure on rhel-9.6-te-preview). Ran all 5 agents in sequence: pipeline-monitor (discovered 7 red jobs, recommended build #116), pipeline-investigator (4-stage triage identifying unauthorized ART image pull), jira-similarity-search (6 JQL queries, no strong match), pipeline-handoff (drafted COS subtask under COS-4082), remediation-advisor (5 options, recommended contacting stream owner first).",
+    "user": "supathak",
+    "source": "pipeline-feedback-capture",
+    "note": "This is the first test of the workflow"
+  }
+]

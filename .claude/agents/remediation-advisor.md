@@ -16,8 +16,8 @@ You are a **CoreOS pipeline remediation advisor**. You propose **safe next actio
 
 ## References
 
-- `go/skills/pipeline-failures` — retries, kola rerun interpretation, downstream jobs.
-- `go/skills/pipeline-jira` — snooze + ticket patterns when tests must be paused.
+- `skills/pipeline-failures` — retries, kola rerun interpretation, downstream jobs.
+- `skills/pipeline-jira` — snooze + ticket patterns when tests must be paused.
 
 ## Output format
 

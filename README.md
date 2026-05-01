@@ -2,6 +2,40 @@
 
 CLI tools for monitoring and analyzing Red Hat CoreOS (RHCOS) infrastructure.
 
+## Repository architecture
+
+High-level map of how **runnable code**, **Claude personas**, and **skill playbooks** fit together (paths are repo-relative):
+
+```mermaid
+flowchart TB
+  subgraph root [Repo root]
+    PY["Python CLIs\njenkins.py, *.py"]
+    DF["Dockerfile\npodman image — canonical for pipeline agents"]
+    ENV[".env / .env.example\ngitignored secrets"]
+    SK["skills/\nMarkdown playbooks — NOT Go code"]
+    CC[".claude/\nagents/*.md + commands/*.md"]
+    DOC["CLAUDE.md + README.md"]
+  end
+  subgraph go [go/ — optional second CLI]
+    GOCMD["cmd/coreos-tools"]
+    GODF["Dockerfile / Dockerfile.agent\nOpenCode image copies skills/"]
+  end
+  PY --> DF
+  SK --> CC
+  DOC --> CC
+  SK --> GODF
+```
+
+| Area | Purpose |
+|------|---------|
+| **`skills/`** | Claude/OpenCode **skill** folders (`SKILL.md` + helpers). Referenced by agents; kept separate from **`go/`** so it is obvious they are not compiled Go. |
+| **`.claude/agents/`** | **@persona** markdown — routing lives in **`CLAUDE.md`**. |
+| **`.claude/commands/`** | Slash-command definitions to copy into `~/.claude/commands/`. |
+| **Root Python + `Dockerfile`** | Default **`podman run … jenkins.py`** path used in triage skills. |
+| **`go/`** | Alternate **Go** implementation of Jenkins tooling; **`go/Dockerfile.agent`** builds the OpenCode/agent image and **`COPY skills/`** into the container. |
+
+**Typical agentic flow (after GATE):** `@gitlab-similarity-search` → `@jira-similarity-search` → `@pipeline-handoff` (see **`CLAUDE.md`**).
+
 ## Tools
 
 | Tool | Description |
@@ -99,21 +133,38 @@ Add **`-s user`** after `claude mcp add` if you want this server in **user** sco
 
 **Write policy:** Pipeline agents in this repo are defined to **draft** handoffs and **not** change Jira unless **you** explicitly ask in-session; keep using that rule when testing MCP.
 
+### GitLab failure tracker (PAT + API — no MCP)
+
+For **`@gitlab-similarity-search`** and **`skills/pipeline-gitlab`**, set a **Personal Access Token** with at least **`read_api`** (see GitLab → **Preferences → Access tokens**). **Do not commit** the token.
+
+Add the same variables to **`.env`** at the repo root (already **gitignored**), for example:
+
+```bash
+GITLAB_HOST=gitlab.cee.redhat.com
+GITLAB_PROJECT=coreos/pipeline-failure-tracker
+GITLAB_TOKEN=glpat-…
+```
+
+**Claude Code:** Bash tools often **do not inherit** exports from the terminal where you ran `claude`. **`@gitlab-similarity-search`** is instructed to **`source .env`** from the repo root before **`curl`** / **`glab`** (see **`skills/pipeline-gitlab`**). You can still `export` in the shell for manual `curl` tests.
+
+If **`gitlab.cee.redhat.com` GitLab MCP OAuth** fails (e.g. invalid scope), this PAT + **`.env`** path is the **supported** integration—**`curl`** or **`glab api`** as in the skill.
+
 **Run Claude Code** from the repo root (`claude`), then:
 
 | Action | What to type |
 |--------|----------------|
 | Pipeline health / what to triage | `/pipeline-status` or ask: *What’s the current RHEL CoreOS Jenkins pipeline status?* |
 | Deep triage for one build | `/pipeline-triage` then *job `build`, build `116`* — or `@pipeline-investigator triage job build, build 116` |
-| Similar existing COS issues (dedupe) | `@jira-similarity-search` with job, build, and error/classification (needs Jira access in your environment) |
+| Similar **GitLab** tracker issues (history / flakes — **run first**) | `@gitlab-similarity-search` with job, build, and error/classification (**`GITLAB_TOKEN`** / **`glab`** + **`.env`**; see above) |
+| Similar existing COS issues (dedupe — **after GitLab**) | `@jira-similarity-search` with the same signals (Jira CLI/MCP in your environment) |
 | Jira draft (no auto-create) | `@pipeline-handoff` with your triage summary |
 | Next-step options | `@remediation-advisor` after triage |
 | Group failures by root cause | `@cross-build-analyst` (see `.claude/agents/cross-build-analyst.md`) |
 
 **Repo layout for agents**
 
-- `.claude/agents/*.md` — personas (monitor, investigator, Jira similarity search, handoff, remediation, cross-build analyst)
-- `go/skills/pipeline-triage-workflow/SKILL.md` — staged Jenkins triage (Gather → Logs → Classify → Summarize → **GATE**); **@jira-similarity-search** is a separate step before **@pipeline-handoff**
-- `go/skills/pipeline-failures`, `pipeline-jira`, etc. — domain playbooks the agents reference
+- `.claude/agents/*.md` — personas (monitor, investigator, Jira + **GitLab** similarity search, handoff, remediation, cross-build analyst)
+- `skills/pipeline-triage-workflow/SKILL.md` — staged Jenkins triage (Gather → Logs → Classify → Summarize → **GATE**); **@gitlab-similarity-search** → **@jira-similarity-search** → **@pipeline-handoff**
+- `skills/pipeline-failures`, `pipeline-jira`, **`pipeline-gitlab`**, etc. — domain playbooks the agents reference
 
 `~/.claude/commands/` only registers slash commands; **source files stay in this repo** so the team can review them in PRs.

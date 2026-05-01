@@ -95,6 +95,6 @@ Use this information to:
 ## Important Notes
 
 - This skill is **read-only** - it reviews past feedback, doesn't modify it
-- Feedback is stored in: `go/skills/pipeline-feedback-capture/scripts/feedback.json`
+- Feedback is stored in: `skills/pipeline-feedback-capture/scripts/feedback.json`
 - Empty results mean no matching feedback exists yet
 - Use `--summary-only` for quick overviews, full output for details

@@ -10,7 +10,7 @@ Search and analyze past feedback from pipeline triage workflow sessions.
 ## Instructions
 
 1. Read and follow `.claude/agents/pipeline-feedback-reviewer.md`
-2. Use the `review-pipeline-feedback` skill from `go/skills/review-pipeline-feedback/SKILL.md`
+2. Use the `review-pipeline-feedback` skill from `skills/review-pipeline-feedback/SKILL.md`
 3. Determine what the user wants to search for
 4. Run the search with appropriate filters
 5. Present insights clearly and concisely
@@ -38,6 +38,6 @@ The agent will:
 
 ## Behind the Scenes
 
-Searches: `go/skills/pipeline-feedback-capture/scripts/feedback.json`
+Searches: `skills/pipeline-feedback-capture/scripts/feedback.json`
 
 All feedback from `/pipeline-feedback` invocations is stored there and searchable.

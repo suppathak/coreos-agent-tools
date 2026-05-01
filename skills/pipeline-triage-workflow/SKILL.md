@@ -17,9 +17,11 @@ Run **one failed build** through a **fixed sequence** of stages. Each stage has 
 
 **Inputs (required):** `JOB` (Jenkins job name), `BUILD` (integer build number).
 
-**Related skills:** `pipeline-failures` (deep patterns, kola via `coreos-tools` if you use the Go image), `pipeline-jira` (COS ticket text **after** GATE, via **@pipeline-handoff**).
+**Related skills:** `pipeline-failures` (deep patterns, kola via `coreos-tools` if you use the Go image), `pipeline-jira` (COS Jira **after** GATE), `pipeline-gitlab` (internal **GitLab** failure tracker; PAT + API), **`@pipeline-handoff`** for drafts.
 
-**Multi-agent sequence (recommended):** **@pipeline-investigator** (this skill, stages 1–4) → **@jira-similarity-search** (read-only COS dedupe; `go/skills/pipeline-jira` bounded JQL) → **@pipeline-handoff** (draft). Investigator does **not** call Jira; keep Jenkins vs Jira concerns separate.
+**Multi-agent sequence (recommended):** **@pipeline-investigator** (this skill, stages 1–4) → **@gitlab-similarity-search** (read-only GitLab history / flake cache; `skills/pipeline-gitlab`) → **@jira-similarity-search** (read-only COS Jira; `skills/pipeline-jira`) → **@pipeline-handoff** (draft). Investigator does **not** call Jira or GitLab; keep Jenkins vs tracker concerns separate.
+
+**Why GitLab before Jira:** Team convention — **GitLab** holds **historical / recurring** failure notes with low notification noise; **Jira** is for **actionable** COS work. Check the internal tracker **first**, then COS Jira for duplicates and parents. Skip GitLab only if **`GITLAB_TOKEN`** / **`glab`** is unavailable (say so at GATE).
 
 ---
 
@@ -118,11 +120,11 @@ Use grep patterns from `pipeline-failures` when analyzing saved log text (`error
 
 **Stop.** Present **Gather → Logs → Classify → Summarize** to the user.
 
-**Next agents (typical order):** Tell the user to run **@jira-similarity-search** with job, build, classification, and a short error excerpt **before** **@pipeline-handoff**, so dedupe is explicit and **Jenkins triage stays separate from Jira**.
+**Next agents (typical order):** Tell the user to run **@gitlab-similarity-search** first (when **`GITLAB_TOKEN`** or **`glab`** is available), then **@jira-similarity-search**, with job, build, classification, and a short error excerpt **before** **@pipeline-handoff**, so **historical GitLab** context precedes **actionable Jira** dedupe.
 
-**Default policy:** Only **suggest** Jira text or rerun. Do **not** run `jira issue create` or `jenkins.py jobs build` unless the user **explicitly** asks. Do **not** query Jira from this skill—use **@jira-similarity-search** for that.
+**Default policy:** Only **suggest** Jira / GitLab text or rerun. Do **not** run `jira issue create`, GitLab issue create, or `jenkins.py jobs build` unless the user **explicitly** asks. Do **not** query Jira or GitLab from this skill—use the **similarity** agents for that.
 
-After similarity + approval, use **`pipeline-jira`** with **@pipeline-handoff** for COS conventions and commands.
+After similarity + approval, use **`pipeline-jira`** / **`pipeline-gitlab`** with **@pipeline-handoff** for conventions and commands.
 
 ---
 

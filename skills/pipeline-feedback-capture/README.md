@@ -24,7 +24,7 @@ Invoked via:
 
 ## Feedback Storage
 
-All feedback is appended to: `go/skills/pipeline-feedback-capture/scripts/feedback.json`
+All feedback is appended to: `skills/pipeline-feedback-capture/scripts/feedback.json`
 
 Each entry contains:
 ```json

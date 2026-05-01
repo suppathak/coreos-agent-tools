@@ -3,5 +3,16 @@ __pycache__/
 *.pyc
 *.db
 
+# Local Python / OS / editor noise
+.venv/
+venv/
+.DS_Store
+
+# Claude Code local overrides (do not commit)
+.claude/settings.local.json
+
+# Optional: local session transcripts at repo root
+session*.md
+
 # Nested clone / local workflow experiments (not part of this repo)
 workflows/

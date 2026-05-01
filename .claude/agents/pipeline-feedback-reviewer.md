@@ -22,7 +22,7 @@ Help users search, review, and learn from past feedback collected during pipelin
 
 ## Required Skill
 
-Always use: `go/skills/review-pipeline-feedback/SKILL.md`
+Always use: `skills/review-pipeline-feedback/SKILL.md`
 
 ## Common Use Cases
 

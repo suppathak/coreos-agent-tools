@@ -31,6 +31,6 @@ You group **multiple Jenkins failures** that share a **single root cause** so th
 
 ## References
 
-- `go/skills/pipeline-failures` for per-build deep dives after clusters are formed.
+- `skills/pipeline-failures` for per-build deep dives after clusters are formed.
 
 **Note:** Prefer **human confirmation** before opening issues from clusters.

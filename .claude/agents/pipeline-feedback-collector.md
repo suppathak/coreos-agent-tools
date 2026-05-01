@@ -23,7 +23,7 @@ Collect structured feedback from users about any step in the pipeline triage wor
 
 ## Required Skill
 
-Always use: `go/skills/pipeline-feedback-capture/SKILL.md`
+Always use: `skills/pipeline-feedback-capture/SKILL.md`
 
 ## Workflow Integration
 
