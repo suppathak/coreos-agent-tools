@@ -35,24 +35,37 @@ When the user’s message is about **RHEL CoreOS / RHCOS / Jenkins / the `build`
 
 ## Repository layout (read when navigating the repo)
 
-```mermaid
-flowchart LR
-  subgraph exec [Execution — default for pipeline agents]
-    IMG["Root Dockerfile\n+ jenkins.py / *.py"]
-  end
-  subgraph claude [Claude Code — versioned behavior]
-    AG[".claude/agents/*.md"]
-    CMD[".claude/commands/*.md"]
-    SK["skills/*/SKILL.md"]
-  end
-  subgraph optional [Optional]
-    GO["go/\nGo coreos-tools"]
-    AGIMG["go/Dockerfile.agent\ncopies skills/ → OpenCode"]
-  end
-  SK --> AG
-  IMG --> AG
-  SK --> AGIMG
-  GO --> AGIMG
+**Where things live** (execution first, then what agents read):
+
+```
+  Repo root
+  ├── Dockerfile + jenkins.py (and other *.py)   ← podman --env-file .env … default entrypoint
+  ├── .env                                      ← secrets for local / Claude Bash (gitignored)
+  ├── skills/<name>/SKILL.md                     ← workflow text agents must follow
+  ├── .claude/agents/*.md                        ← @-mention personas
+  ├── .claude/commands/*.md                      ← slash-command stubs to copy to ~/.claude/commands/
+  └── CLAUDE.md (this file) + README.md
+
+  go/  (optional)
+  └── Dockerfile.agent  ← build context = repo root; COPY copies skills/ into OpenCode image
+```
+
+**Default triage chain** (same order you should suggest after GATE):
+
+```
+  @pipeline-monitor
+           |
+           v
+  @pipeline-investigator  →  GATE
+           |
+           v
+  @gitlab-similarity-search
+           |
+           v
+  @jira-similarity-search
+           |
+           v
+  @pipeline-handoff
 ```
 
 - **`skills/`** — Markdown **skills** (workflows, JQL, GitLab API patterns). **Not** part of the Go module; paths look like `skills/<name>/SKILL.md`.

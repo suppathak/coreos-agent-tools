@@ -4,26 +4,40 @@ CLI tools for monitoring and analyzing Red Hat CoreOS (RHCOS) infrastructure.
 
 ## Repository architecture
 
-High-level map of how **runnable code**, **Claude personas**, and **skill playbooks** fit together (paths are repo-relative):
+How **runnable code**, **Claude agents**, and **skills** connect (read top → bottom):
 
-```mermaid
-flowchart TB
-  subgraph root [Repo root]
-    PY["Python CLIs\njenkins.py, *.py"]
-    DF["Dockerfile\npodman image — canonical for pipeline agents"]
-    ENV[".env / .env.example\ngitignored secrets"]
-    SK["skills/\nMarkdown playbooks — NOT Go code"]
-    CC[".claude/\nagents/*.md + commands/*.md"]
-    DOC["CLAUDE.md + README.md"]
-  end
-  subgraph go [go/ — optional second CLI]
-    GOCMD["cmd/coreos-tools"]
-    GODF["Dockerfile / Dockerfile.agent\nOpenCode image copies skills/"]
-  end
-  PY --> DF
-  SK --> CC
-  DOC --> CC
-  SK --> GODF
+```
+  Root (same folder as this README)
+  ├── *.py + Dockerfile          →  podman runs jenkins.py, etc. (default for pipeline triage)
+  ├── .env / .env.example        →  credentials (.env is gitignored)
+  ├── skills/                    →  SKILL.md playbooks (Markdown only — not Go source)
+  ├── .claude/agents/*.md        →  @pipeline-monitor, @pipeline-investigator, …
+  ├── .claude/commands/*.md      →  /pipeline-triage, /pipeline-status, …
+  └── CLAUDE.md                  →  routing rules for Claude Code
+
+  Optional second stack:
+
+  go/
+  ├── cmd/coreos-tools           →  Go Jenkins CLI (alternate to Python in container)
+  └── Dockerfile.agent           →  build from repo root; copies skills/ into OpenCode image
+```
+
+**Typical pipeline flow** (one failure, after triage GATE):
+
+```
+  @pipeline-monitor          (what is red? pick job + build)
+           |
+           v
+  @pipeline-investigator     (Gather → Logs → Classify → Summary → GATE)
+           |
+           v
+  @gitlab-similarity-search  (internal tracker; PAT + source .env before curl)
+           |
+           v
+  @jira-similarity-search     (COS Jira dedupe)
+           |
+           v
+  @pipeline-handoff           (draft only unless user asks to create)
 ```
 
 | Area | Purpose |
@@ -33,8 +47,6 @@ flowchart TB
 | **`.claude/commands/`** | Slash-command definitions to copy into `~/.claude/commands/`. |
 | **Root Python + `Dockerfile`** | Default **`podman run … jenkins.py`** path used in triage skills. |
 | **`go/`** | Alternate **Go** implementation of Jenkins tooling; **`go/Dockerfile.agent`** builds the OpenCode/agent image and **`COPY skills/`** into the container. |
-
-**Typical agentic flow (after GATE):** `@gitlab-similarity-search` → `@jira-similarity-search` → `@pipeline-handoff` (see **`CLAUDE.md`**).
 
 ## Tools
 
